@@ -1,5 +1,5 @@
 import logging
-from sage.all import RealField, sqrt, log, floor
+from sage.all import RealField, sqrt, log, floor, gcd, ZZ, Integers, lcm
 
 class DiophantineSystem:
 
@@ -8,7 +8,7 @@ class DiophantineSystem:
         self.logger = logging.getLogger(self.__class__.__name__)
         self.set_verbose(verbose)
 
-        self._RR = RealField(prec=prec)
+        self._RR = RealField(prec)
         self.f = f
         self.d1 = d1
         self.d2 = d2
@@ -132,3 +132,101 @@ class DiophantineSystem:
 
     def _compute_lam(self):
         return self._RR(self.c2 * self.c0 * self._ais[0] * self.d2**self.k) / (self.c1 * (self.m + self.alpha))
+
+
+class DiophantinePolynomialPerfectPower:
+    """
+    We prove the Diophantine equation f(x) = da^n, does not have any solutions for n >= 2. We apply the method
+    in [1]
+    
+    Reference:
+    [1] Angelos Koutsianas. "On the solutions of the Diophantine equation (x - d)^2 + x^2 + (x + d)^2 = y^n for d a 
+    prime power." Funct. Approx. Comment. Math. 64 (2) 141 - 151, June 2021
+    """
+
+    def __init__(self, f, d, a, verbose=0, bound=20):
+        self.logger = logging.getLogger(self.__class__.__name__)
+        self.set_verbose(verbose)
+
+        self.f = f
+        self.d = d
+        self.a = a
+        self._bound = bound
+
+        for p in ZZ(gcd(self.f.coefficients())).prime_factors():
+            if self.a * self.d % p != 0:
+                raise ValueError(f"The prime factor {p} of the gcd of the coefficients of f does not divide d*a.")
+
+        self.S = [s for s in range(2, self._bound) if gcd(self.a*self.d, s) == 1]
+        self.logger.info(f"The set S is {self.S}.")
+
+    def set_verbose(self, verbose):
+        # Map integers to logging levels
+        level_map = {
+            0: logging.WARNING,
+            1: logging.INFO,
+            2: logging.DEBUG
+        }
+        if verbose not in level_map:
+            raise ValueError(f"Invalid verbose value '{verbose}'. Allowed values are 0 (WARNING), 1 (INFO), 2 (DEBUG).")
+
+        logging.basicConfig(
+            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+            level=level_map[verbose]
+        )
+        self.logger.setLevel(level_map[verbose])
+
+    def solve(self):
+        solve_with_prime_factors = self.solve_with_prime_factors()
+        if solve_with_prime_factors:
+            return True
+        else:
+            return self.solve_with_coprime_integers()
+
+    def solve_with_prime_factors(self):
+        for p in (self.d * self.a).prime_factors():
+            sol = True
+            for u in range(p):
+                if self.f(u) % p == 0:
+                    sol = False
+                    self.logger.debug(f"Failure for prime divisor p={p} of ad and u={u}.")
+                    break
+            if sol:
+                self.logger.info(f"No solutions for the prime factor of ad for p={p}.")
+                return True
+        self.logger.info(f"The local method for prime divisors of ad failed.")
+        return False
+
+
+    def solve_with_coprime_integers(self):
+        t = 1
+        for s in self.S:
+            self.logger.debug(f"We work on the case s={s}.")
+            Zs = Integers(s)
+            ts = Zs(self.a).multiplicative_order()
+            self.logger.debug(f"ts: {ts}")
+            wsa1 = [(self.d * self.a**k) % s for k in range(1, ts)]
+            wsa2 = [self.f(i) % s for i in range(1, s + 1)]
+            Wsa = [w for w in wsa1 if w in wsa2]
+            self.logger.debug(f"The set Wsa is {Wsa}.")
+            if len(Wsa) == 0:
+                t = lcm(t, ts)
+
+        self.logger.info(f"The integer t is {t}.")
+        L = (self.a**t - 1).divisors()
+        L.remove(1)
+        self.logger.info(f"The set L is {L}.")
+        for l in L:
+            self.logger.debug(f"We apply the criterion for l={l}.")
+            sol = True
+            failures = []
+            for u in range(l):
+                if (self.f(u) - self.d) % l == 0:
+                    sol = False
+                    failures.append(u)
+            self.logger.debug(f"The criterion fails for u={failures}")
+                    # break
+            if sol:
+                return True
+        return False
+
