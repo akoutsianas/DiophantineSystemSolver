@@ -1,7 +1,7 @@
 import logging
-from sage.all import polygen, QQ
+from sage.all import polygen, QQ, ZZ
 
-from DiophantineSystemSolver.diophantine_system_solver import DiophantineSystem
+from diophantine_system_solver import DiophantineSystem
 
 class ConsecutivePowersSolver:
 
@@ -90,25 +90,34 @@ class ConsecutivePowersSolver:
     def _compute_d1_d2_case_even(self):
         return None
 
-    def solve_equation(self):
+    def solve_equation(self, b2_lower=1):
         pairs = self._compute_d1_d2()
         f = self._homogenous_equation()
         n0 = self._lower_bound_n
         b2 = 1
         for (d1, d2) in pairs:
             self.logger.info(f"We solve the system for d1={d1} and d2={d2}.")
-            ds = DiophantineSystem(f, 2**(self.k - 1) * d1, d2)
+            ds = DiophantineSystem(f, 2**(self.k - 1) * d1, d2, b2_lower=b2_lower)
             n1 = ds.bound_n()
             b20 = ds.b2
             self.logger.debug(f"We have n1={n1} and b2={b20}.")
             n0 = max(n1, n0)
             b2 = max(b2, b20)
+        self.logger.warning(f"When b2>{b2} then n<={n0}")
         return n0, b2
 
+    def solve_for_small_values_of_y2(self, b2):
+        pairs = self._compute_d1_d2()
+        f = self._homogenous_equation()
+        for (d1, d2) in pairs:
+            ds = DiophantineSystem(f, 2**(self.k - 1) * d1, d2)
+            pairs = ds.solve_small_values_of_y2(b2)
+            self.logger.info(f"For d1={d1} and d2={d2} we fail for (y1, y2)={pairs}!")
+
     def _homogenous_equation(self):
-        if self.k %2 == 1:
+        if self.k % 2 == 1:
             f = self.fk(self._x**2)
         else:
             f = self.fk(self._x - 1)
-        self.logger.debug(f"Fk equal to {f}.")
+        self.logger.debug(f"fk equal to {f}.")
         return f
