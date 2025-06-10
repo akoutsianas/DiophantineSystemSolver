@@ -6,7 +6,6 @@ from DiophantineSystemSolver.diophantine_system_solver import DiophantineSystem
 from sage.combinat.q_bernoulli import q_bernoulli
 from sage.all import bernoulli_polynomial
 
-# Compute d1 and d2 for the Schaffer conjecture
 
 class SchafferSolver:
 
