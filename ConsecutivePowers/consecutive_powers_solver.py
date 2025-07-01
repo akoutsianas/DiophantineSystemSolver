@@ -1,5 +1,5 @@
 import logging
-from sage.all import polygen, QQ, ZZ
+from sage.all import polygen, QQ, ceil, prime_range
 
 from diophantine_system_solver import DiophantineSystem
 
@@ -8,6 +8,7 @@ class ConsecutivePowersSolver:
     def __init__(self, k, verbose=0):
         self.logger = logging.getLogger(self.__class__.__name__)
         self.set_verbose(verbose)
+        self._verbose = verbose
 
         if k % 4 == 0:
             raise ValueError(f"The value of k is a multiple of 4, so there are only the trivial solutions. "
@@ -19,7 +20,7 @@ class ConsecutivePowersSolver:
         self.k = k
         self.fk = self._compute_fk()
         self._lower_bound_n = self._compute_lower_bound_n()
-        self.logger.warning(f"For k={self.k} we assume that n > {max(self._lower_bound_n, 2)}!")
+        self.logger.warning(f"For k={self.k} we assume that n > {max(self._lower_bound_n, 3)}!")
 
     def set_verbose(self, verbose):
         # Map integers to logging levels
@@ -90,29 +91,30 @@ class ConsecutivePowersSolver:
     def _compute_d1_d2_case_even(self):
         return None
 
-    def solve_equation(self, b2_lower=1):
+    def solve_equation(self, sieve_method='naive', prec=100):
         pairs = self._compute_d1_d2()
         f = self._homogenous_equation()
         n0 = self._lower_bound_n
-        b2 = 1
+        sols = []
         for (d1, d2) in pairs:
             self.logger.info(f"We solve the system for d1={d1} and d2={d2}.")
-            ds = DiophantineSystem(f, 2**(self.k - 1) * d1, d2, b2_lower=b2_lower)
-            n1 = ds.bound_n()
-            b20 = ds.b2
-            self.logger.debug(f"We have n1={n1} and b2={b20}.")
+            if self.k % 2 == 1:
+                ds = DiophantineSystem(f, 2**(self.k - 1) * d1, d2, prec=prec, verbose=self._verbose)
+            else:
+                ds = DiophantineSystem(f, 2 ** (self.k - 2) * d1, 2*d2, prec=prec, verbose=self._verbose)
+            x0 = ceil(max(ds.x1, ds.x2)) + 1
+            self.logger.info(f"X0: {x0}.")
+            n1 = ds.bound_n_for_x0(x0)
+            solsds = ds.sieve(x0, method=sieve_method)
+            self.logger.info(f"We have the small solutions {solsds}.")
+            for v in solsds:
+                if v not in sols:
+                    sols.append(v)
+            self.logger.debug(f"We have n1={n1}.")
             n0 = max(n1, n0)
-            b2 = max(b2, b20)
-        self.logger.warning(f"When b2>{b2} then n<={n0}")
-        return n0, b2
-
-    def solve_for_small_values_of_y2(self, b2):
-        pairs = self._compute_d1_d2()
-        f = self._homogenous_equation()
-        for (d1, d2) in pairs:
-            ds = DiophantineSystem(f, 2**(self.k - 1) * d1, d2)
-            pairs = ds.solve_small_values_of_y2(b2)
-            self.logger.info(f"For d1={d1} and d2={d2} we fail for (y1, y2)={pairs}!")
+        n0 = max(prime_range(3, n0+1))
+        self.logger.info(f"We have n>={n0}.")
+        return n0, sols
 
     def _homogenous_equation(self):
         if self.k % 2 == 1:

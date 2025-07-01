@@ -1,5 +1,5 @@
 import logging
-from sage.all import RealField, sqrt, log, floor, ZZ, exp, prime_range
+from sage.all import RealField, QQ, log, floor, ZZ, exp, prime_range
 
 class DiophantineSystem:
 
@@ -167,7 +167,7 @@ class DiophantineSystem:
             Y2 = floor((x0/self.d2)**(1/n))
             for y2 in range(-Y2, Y2+1):
                 x = self.d2 * y2**n
-                y1 = (ZZ(self.f(x))/self.d1)**(1/n)
+                y1 = (QQ(self.f(x))/self.d1)**(1/n)
                 if y1 in ZZ:
                     if x not in sols:
                         sols.append(x)
