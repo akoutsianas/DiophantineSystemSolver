@@ -1,5 +1,5 @@
 import logging
-from sage.all import RealField, sqrt, log, floor, ZZ, exp
+from sage.all import RealField, sqrt, log, floor, ZZ, exp, prime_range
 
 class DiophantineSystem:
 
@@ -144,4 +144,32 @@ class DiophantineSystem:
             bound = None
         return bound
 
+    def sieve(self, x0, method='naive'):
+        if method == 'naive':
+            return self._sieve_naive(x0)
+        elif method == 'powers':
+            return self._sieve_powers(x0)
+        return None
+
+    def _sieve_naive(self, x0):
+        sols = []
+        for x in range(-x0, x0 + 1):
+            w1 = self.f(x) / self.d1
+            w2 = x / self.d2
+            if w1.is_perfect_power() and w2.is_perfect_power():
+                sols.append(x)
+        return sols
+
+    def _sieve_powers(self, x0):
+        sols = []
+        N0 = floor(log(x0 / self.d2) / log(2))
+        for n in prime_range(3, N0 + 1):
+            Y2 = floor((x0/self.d2)**(1/n))
+            for y2 in range(-Y2, Y2+1):
+                x = self.d2 * y2**n
+                y1 = (ZZ(self.f(x))/self.d1)**(1/n)
+                if y1 in ZZ:
+                    if x not in sols:
+                        sols.append(x)
+        return sols
 
