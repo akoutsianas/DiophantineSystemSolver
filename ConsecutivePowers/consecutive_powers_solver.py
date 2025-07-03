@@ -1,5 +1,5 @@
 import logging
-from sage.all import polygen, QQ, ceil, prime_range
+from sage.all import polygen, QQ, ZZ, ceil, prime_range, legendre_symbol
 
 from diophantine_system_solver import DiophantineSystem
 
@@ -77,6 +77,7 @@ class ConsecutivePowersSolver:
                     e1q = -e2q
                     pairs_q.append((q ** e1q, q ** e2q))
             self.logger.debug(f"Pairs_q: {pairs_q}")
+
             pairs_new = []
             for pair in pairs:
                 for pair_q in pairs_q:
@@ -89,7 +90,35 @@ class ConsecutivePowersSolver:
         return pairs
 
     def _compute_d1_d2_case_even(self):
-        return None
+        k_primes_dict = {q: self.k.valuation(q) for q in ZZ(self.k/2).prime_factors()
+                         if legendre_symbol(-1, q) == 1}
+        self.logger.debug(f"The information about the prime factors of k are {k_primes_dict}.")
+        pairs = [(1, 1)]
+
+        for q in k_primes_dict.keys():
+            pairs_q = []
+
+            # Case e1q <= e2q
+            for e1q in range(k_primes_dict[q] + 1):
+                e2q = -e1q
+                pairs_q.append((q ** e1q, q ** e2q))
+
+            # Case e2q <= e1q
+            for e2q in range(k_primes_dict[q] + 1):
+                e1q = -e2q
+                pairs_q.append((q ** e1q, q ** e2q))
+            self.logger.debug(f"Pairs_q: {pairs_q}")
+
+            pairs_new = []
+            for pair in pairs:
+                for pair_q in pairs_q:
+                    d1 = pair[0] * pair_q[0]
+                    d2 = pair[1] * pair_q[1]
+                    if (d1, d2) not in pairs_new:
+                        pairs_new.append((d1, d2))
+            pairs = pairs_new
+
+        return pairs
 
     def solve_equation(self, sieve_method='naive', prec=100):
         pairs = self._compute_d1_d2()
@@ -106,6 +135,15 @@ class ConsecutivePowersSolver:
             self.logger.info(f"X0: {x0}.")
             n1 = ds.bound_n_for_x0(x0)
             solsds = ds.sieve(x0, method=sieve_method)
+            self.logger.debug(f"Solutions of the Diophantine system after the sieve: {solsds}")
+            if self.k % 2 == 0:
+                sol_temp = []
+                for sol in solsds:
+                    if ZZ(sol - 1).is_square():
+                        for rt, _ in (self._x**2 - (sol - 1)).roots():
+                            if rt not in sol_temp:
+                                sol_temp.append(rt)
+                solsds = sol_temp
             self.logger.info(f"We have the small solutions {solsds}.")
             for v in solsds:
                 if v not in sols:
