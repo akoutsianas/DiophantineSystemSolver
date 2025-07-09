@@ -134,18 +134,18 @@ class ConsecutivePowersSolver:
             x0 = ceil(max(ds.x1, ds.x2)) + 1
             self.logger.info(f"X0: {x0}.")
             n1 = ds.bound_n_for_x0(x0)
-            solsds = ds.sieve(x0, method=sieve_method)
-            self.logger.debug(f"Solutions of the Diophantine system after the sieve: {solsds}")
+            sols_ds = ds.sieve(x0, method=sieve_method)
+            self.logger.debug(f"Solutions of the Diophantine system after the sieve: {sols_ds}")
             if self.k % 2 == 0:
                 sol_temp = []
-                for sol in solsds:
+                for sol in sols_ds:
                     if ZZ(sol - 1).is_square():
                         for rt, _ in (self._x**2 - (sol - 1)).roots():
                             if rt not in sol_temp:
                                 sol_temp.append(rt)
-                solsds = sol_temp
-            self.logger.info(f"We have the small solutions {solsds}.")
-            for v in solsds:
+                sols_ds = sol_temp
+            self.logger.info(f"We have the small solutions {sols_ds}.")
+            for v in sols_ds:
                 if v not in sols:
                     sols.append(v)
             self.logger.debug(f"We have n1={n1}.")

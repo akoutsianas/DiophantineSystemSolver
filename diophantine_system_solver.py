@@ -1,4 +1,5 @@
 import logging
+import time
 from sage.all import RealField, QQ, log, floor, ZZ, exp, prime_range
 
 class DiophantineSystem:
@@ -165,11 +166,18 @@ class DiophantineSystem:
         N0 = floor(log(x0 / self.d2) / log(2))
         for n in prime_range(3, N0 + 1):
             Y2 = floor((x0/self.d2)**(1/n))
+            self.logger.debug(f"Y2: {Y2}")
+            t0 = time.time()
             for y2 in range(-Y2, Y2+1):
                 x = self.d2 * y2**n
-                y1 = (QQ(self.f(x))/self.d1)**(1/n)
+                y1 = (QQ(self.f(x))/self.d1)
                 if y1 in ZZ:
-                    if x not in sols:
-                        sols.append(x)
+                    w = y1.is_perfect_power()
+                    if w:
+                        y1 = y1**(1/n)
+                        if y1 in ZZ and x not in sols:
+                            sols.append(x)
+            t1 = time.time()
+            self.logger.debug(f"Time for n={n}: {t1 - t0}")
         return sols
 
