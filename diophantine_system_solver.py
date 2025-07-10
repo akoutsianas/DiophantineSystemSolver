@@ -17,7 +17,7 @@ def internal_iteration(n, lower_bound, upper_bound, d1, d2, f, logger):
                 if y1 in ZZ and x not in solutions:
                     solutions.append(x)
     t1 = time.time()
-    logger.debug(f"Time for n={n}, lower_bound={lower_bound} and upper_bound={upper_bound}: {t1 - t0}")
+    logger.info(f"Time for n={n}, lower_bound={lower_bound} and upper_bound={upper_bound}: {t1 - t0}")
     return solutions
 
 
