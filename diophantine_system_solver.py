@@ -1,6 +1,25 @@
 import logging
-import time
+
 from sage.all import RealField, QQ, log, floor, ZZ, exp, prime_range
+from sage.parallel.decorate import parallel
+
+
+def internal_iteration(n, lower_bound, upper_bound, d1, d2, f, logger):
+    import time
+    solutions = []
+    t0 = time.time()
+    for y2 in range(lower_bound, upper_bound + 1):
+        x = d2 * y2 ** n
+        y1 = (QQ(f(x)) / d1)
+        if y1 in ZZ:
+            if y1.is_perfect_power():
+                y1 = y1 ** (1 / n)
+                if y1 in ZZ and x not in solutions:
+                    solutions.append(x)
+    t1 = time.time()
+    logger.debug(f"Time for n={n}, lower_bound={lower_bound} and upper_bound={upper_bound}: {t1 - t0}")
+    return solutions
+
 
 class DiophantineSystem:
 
@@ -145,39 +164,38 @@ class DiophantineSystem:
             bound = None
         return bound
 
-    def sieve(self, x0, method='naive'):
+    def sieve(self, x0, method='powers', p_iter='multiprocessing', ncpus=2):
         if method == 'naive':
             return self._sieve_naive(x0)
         elif method == 'powers':
-            return self._sieve_powers(x0)
+            return self._sieve_powers(x0, p_iter=p_iter, ncpus=ncpus)
         return None
 
     def _sieve_naive(self, x0):
         sols = []
         for x in range(-x0, x0 + 1):
-            w1 = self.f(x) / self.d1
+            w1 = self.f(ZZ(x)) / self.d1
             w2 = x / self.d2
             if w1.is_perfect_power() and w2.is_perfect_power():
                 sols.append(x)
         return sols
 
-    def _sieve_powers(self, x0):
+    def _sieve_powers(self, x0, p_iter='multiprocessing', ncpus=2):
         sols = []
-        N0 = floor(log(x0 / self.d2) / log(2))
-        for n in prime_range(3, N0 + 1):
-            Y2 = floor((x0/self.d2)**(1/n))
-            self.logger.debug(f"Y2: {Y2}")
-            t0 = time.time()
-            for y2 in range(-Y2, Y2+1):
-                x = self.d2 * y2**n
-                y1 = (QQ(self.f(x))/self.d1)
-                if y1 in ZZ:
-                    w = y1.is_perfect_power()
-                    if w:
-                        y1 = y1**(1/n)
-                        if y1 in ZZ and x not in sols:
-                            sols.append(x)
-            t1 = time.time()
-            self.logger.debug(f"Time for n={n}: {t1 - t0}")
+        n0 = floor(log(x0 / self.d2) / log(2))
+        for n in prime_range(3, n0 + 1):
+            y2_bound = floor((x0/self.d2)**(1/n))
+            self.logger.debug(f"y2_bound: {y2_bound}")
+            iter_length = floor((2*y2_bound + 1) / ncpus)
+            limits = [(n, -y2_bound + i * iter_length, -y2_bound + (i + 1) * iter_length,
+                       self.d1, self.d2, self.f, self.logger) for i in range(ncpus-1)]
+            limits.append((n, -y2_bound + (ncpus - 1) * iter_length, y2_bound,
+                           self.d1, self.d2, self.f, self.logger))
+            self.logger.debug(f"limits: {limits}")
+            sols_n = list(parallel(p_iter=p_iter, ncpus=ncpus)(internal_iteration)(limits))
+            for s in sols_n:
+                for sol in s[-1]:
+                    if sol not in sols:
+                        sols.append(sol)
         return sols
 
