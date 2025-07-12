@@ -20,7 +20,7 @@ class ConsecutivePowersSolver:
         self.k = k
         self.fk = self._compute_fk()
         self._lower_bound_n = self._compute_lower_bound_n()
-        self.logger.warning(f"For k={self.k} we assume that n > {max(self._lower_bound_n, 3)}!")
+        self.logger.warning(f"For k={self.k} we assume that n >= {max(self._lower_bound_n, 3)}!")
 
     def set_verbose(self, verbose):
         # Map integers to logging levels
@@ -50,7 +50,7 @@ class ConsecutivePowersSolver:
         return fk
 
     def _compute_lower_bound_n(self):
-        return 3*max([self.k.valuation(q) for q in self.k.prime_factors()])
+        return 2*max([self.k.valuation(q) for q in self.k.prime_factors()]) + 1
 
     def _compute_d1_d2(self):
         if self.k % 2 == 1:

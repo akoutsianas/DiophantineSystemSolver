@@ -182,7 +182,7 @@ class DiophantineSystem:
 
     def _sieve_powers(self, x0, p_iter='multiprocessing', ncpus=2):
         sols = []
-        n0 = floor(log(x0 / self.d2) / log(2))
+        n0 = max(floor(log(x0 / self.d2) / log(2)), 3)
         for n in prime_range(3, n0 + 1):
             y2_bound = floor((x0/self.d2)**(1/n))
             self.logger.debug(f"y2_bound: {y2_bound}")
