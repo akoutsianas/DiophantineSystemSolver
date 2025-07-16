@@ -98,11 +98,11 @@ class DiophantineSystem:
 
     def _compute_thetas(self):
         if self._thetan > 1:
-            theta1 = self._RR(self._thetan) ** (1/3)
+            theta1 = (self._RR(self._thetan)) ** (1/QQ(3))
             theta0 = 1
         else:
             theta1 = 1
-            theta0 = self._RR(self._thetan) ** (1/3)
+            theta0 = (self._RR(self._thetan)) ** (1/QQ(3))
         self.logger.debug(f"theta1: {theta1}, theta0: {theta0}")
         return theta1, theta0
 
