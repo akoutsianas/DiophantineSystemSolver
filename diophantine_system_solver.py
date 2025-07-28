@@ -155,7 +155,7 @@ class DiophantineSystem:
         self.params_dict['lam'] = lam
         return lam
 
-    def bound_n_for_x0(self, x0, x0_step=100):
+    def bound_n_for_x0(self, x0, x0_step=10):
         c0, c1, c2 = self._compute_c0_c1_c2(x0)
         alpha = self._compute_alpha(x0, c0)
         lam = self._compute_lam(c0, c1, c2, alpha)
@@ -180,6 +180,7 @@ class DiophantineSystem:
         else:
             self.logger.warning(f"It holds x0 <= x1 or x0 <= x2 or lam >= 1")
             bound = None
+        self.params_dict['x0'] = x0
         return bound, x0
 
     def sieve(self, x0, method='powers', p_iter='multiprocessing', ncpus=2):
