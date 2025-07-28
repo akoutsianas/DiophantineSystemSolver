@@ -1,4 +1,5 @@
 import logging
+import time
 
 from sage.all import RealField, QQ, log, floor, ZZ, exp, prime_range
 from sage.parallel.decorate import parallel
@@ -42,6 +43,8 @@ class DiophantineSystem:
         self.d1 = d1
         self.d2 = d2
         self.k = f.degree()
+        self.params_dict = dict.fromkeys(['theta1', 'theta0', 'm', 'alpha1', 'alpha', 'x0', 'x1', 'x2', 'c0', 'c1',
+                                           'c2', 'lam', 'tn0', 'time'])
         self._ais = self._compute_ais()
         self._cis = self._compute_cis()
         if (self._ais[0] * self.d2**self.k < 0) or (self.d1 < 0):
@@ -94,6 +97,7 @@ class DiophantineSystem:
         else:
             m = r.ceil()
         self.logger.debug(f"m: {m}")
+        self.params_dict['m'] = m
         return m
 
     def _compute_thetas(self):
@@ -104,6 +108,8 @@ class DiophantineSystem:
             theta1 = 1
             theta0 = (self._RR(self._thetan)) ** (1/QQ(3))
         self.logger.debug(f"theta1: {theta1}, theta0: {theta0}")
+        self.params_dict['theta1'] = theta1
+        self.params_dict['theta0'] = theta0
         return theta1, theta0
 
     def _compute_c0_c1_c2(self, x0):
@@ -114,15 +120,20 @@ class DiophantineSystem:
             c1 = abs(self._ais[self.k0]) - sum([abs(self._ais[i])/x0**(i-self.k0) for i in range(self.k0+1, self.k+1)])
             c1 *= abs(self.d2**self.k)
         c2 = self._RR(exp(c0 / (self._theta0 * x0**self.k0)))
+        self.params_dict['c0'] = c0
+        self.params_dict['c1'] = c1
+        self.params_dict['c2'] = c2
         return c0, c1, c2
 
     def _compute_alpha1(self):
         a1 = self.m - self._thetan
         self.logger.debug(f"a1: {a1}")
+        self.params_dict['alpha1'] = a1
         return a1
 
     def _compute_alpha(self, x0, c0):
         alpha = self._alpha1 + c0 / x0**self.k0
+        self.params_dict['alpha'] = alpha
         return alpha
 
     def _compute_x1(self):
@@ -130,15 +141,18 @@ class DiophantineSystem:
         x1 *= sum([abs(self._cis[i]) for i in range(self.k0, self.k+1)])
         x1 = self._RR(x1)**(1/self.k0)
         self.logger.debug(f"x1: {x1}")
+        self.params_dict['x1'] = x1
         return x1
 
     def _compute_x2(self, ):
         x2 = sum([abs(self._ais[i]) for i in range(self.k0+1, self.k+1)]) / abs(self._ais[self.k0])
         self.logger.debug(f"x2: {x2}")
+        self.params_dict['x2'] = x2
         return x2
 
     def _compute_lam(self, c0, c1, c2, alpha):
         lam = self._RR(c2 * c0 * self._ais[0] * self.d2**self.k) / (c1 * (self.m + alpha))
+        self.params_dict['lam'] = lam
         return lam
 
     def bound_n_for_x0(self, x0, x0_step=100):
@@ -159,6 +173,7 @@ class DiophantineSystem:
             num = log(self._RR((self._ais[0] * self.d2**self.k) / (self.d1 * (self.m + alpha))))
             self.logger.debug(f"num: {num}")
             bound = floor(num / log(lam))
+            self.params_dict['tn0'] = bound
             self.logger.debug(f"Bound from computations: {bound}")
             bound = max(bound, 3)
             self.logger.info(f"The bound is {bound}")
@@ -168,11 +183,16 @@ class DiophantineSystem:
         return bound, x0
 
     def sieve(self, x0, method='powers', p_iter='multiprocessing', ncpus=2):
+        t0 = time.time()
+        sols = None
         if method == 'naive':
-            return self._sieve_naive(x0)
+            sols = self._sieve_naive(x0)
         elif method == 'powers':
-            return self._sieve_powers(x0, p_iter=p_iter, ncpus=ncpus)
-        return None
+            sols = self._sieve_powers(x0, p_iter=p_iter, ncpus=ncpus)
+        t1 = time.time()
+        self.logger.info(f"Time for sieve: {t1 - t0} secs")
+        self.params_dict['time'] = t1 - t0
+        return sols
 
     def _sieve_naive(self, x0):
         sols = []
