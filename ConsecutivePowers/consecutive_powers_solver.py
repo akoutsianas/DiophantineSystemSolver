@@ -120,7 +120,7 @@ class ConsecutivePowersSolver:
 
         return pairs
 
-    def solve_equation(self, sieve_method='powers', p_iter='multiprocessing', ncpus=2, prec=100):
+    def solve_equation(self, x0_step=100, sieve_method='powers', p_iter='multiprocessing', ncpus=2, prec=100):
         pairs = self._compute_d1_d2()
         f = self._homogenous_equation()
         n0 = self._lower_bound_n
@@ -132,8 +132,8 @@ class ConsecutivePowersSolver:
             else:
                 ds = DiophantineSystem(f, 2 ** (self.k - 2) * d1, 2*d2, prec=prec, verbose=self._verbose)
             x0 = ceil(max(ds.x1, ds.x2)) + 1
-            self.logger.info(f"X0: {x0}.")
-            n1 = ds.bound_n_for_x0(x0)
+            n1, x0 = ds.bound_n_for_x0(x0, x0_step=x0_step)
+            self.logger.info(f"X0: {x0}")
             sols_ds = ds.sieve(x0, method=sieve_method, p_iter=p_iter, ncpus=ncpus)
             self.logger.debug(f"Solutions of the Diophantine system after the sieve: {sols_ds}")
             if self.k % 2 == 0:

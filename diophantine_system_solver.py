@@ -108,17 +108,12 @@ class DiophantineSystem:
 
     def _compute_c0_c1_c2(self, x0):
         c0 = sum([abs(self._cis[i])/x0**(i - self.k0) for i in range(self.k0, self.k + 1)])
-        self.logger.debug(f"c0: {c0}")
-
         if self.k == self.k0:
             c1 = abs(self.d2**self.k * self._ais[self.k])
         else:
             c1 = abs(self._ais[self.k0]) - sum([abs(self._ais[i])/x0**(i-self.k0) for i in range(self.k0+1, self.k+1)])
             c1 *= abs(self.d2**self.k)
-        self.logger.debug(f"c1: {c1}")
-
-        c2 = exp(c0 / (self._theta0 * x0**self.k0))
-        self.logger.debug(f"c2: {c2}")
+        c2 = self._RR(exp(c0 / (self._theta0 * x0**self.k0)))
         return c0, c1, c2
 
     def _compute_alpha1(self):
@@ -128,7 +123,6 @@ class DiophantineSystem:
 
     def _compute_alpha(self, x0, c0):
         alpha = self._alpha1 + c0 / x0**self.k0
-        self.logger.debug(f"alpha: {alpha}")
         return alpha
 
     def _compute_x1(self):
@@ -145,14 +139,23 @@ class DiophantineSystem:
 
     def _compute_lam(self, c0, c1, c2, alpha):
         lam = self._RR(c2 * c0 * self._ais[0] * self.d2**self.k) / (c1 * (self.m + alpha))
-        self.logger.info(f"lam: {lam}")
         return lam
 
-    def bound_n_for_x0(self, x0):
+    def bound_n_for_x0(self, x0, x0_step=100):
         c0, c1, c2 = self._compute_c0_c1_c2(x0)
         alpha = self._compute_alpha(x0, c0)
-        if (x0 > self.x1) and (x0 > self.x2):
+        lam = self._compute_lam(c0, c1, c2, alpha)
+        while lam >= 1:
+            x0 += x0_step
+            c0, c1, c2 = self._compute_c0_c1_c2(x0)
+            alpha = self._compute_alpha(x0, c0)
             lam = self._compute_lam(c0, c1, c2, alpha)
+        self.logger.debug(f"c0: {c0}")
+        self.logger.debug(f"c1: {c1}")
+        self.logger.debug(f"c2: {c2}")
+        self.logger.debug(f"alpha: {alpha}")
+        self.logger.info(f"lam: {lam}")
+        if (x0 > self.x1) and (x0 > self.x2) and (lam < 1):
             num = log(self._RR((self._ais[0] * self.d2**self.k) / (self.d1 * (self.m + alpha))))
             self.logger.debug(f"num: {num}")
             bound = floor(num / log(lam))
@@ -160,9 +163,9 @@ class DiophantineSystem:
             bound = max(bound, 3)
             self.logger.info(f"The bound is {bound}")
         else:
-            self.logger.warning(f"It holds x0 <= x1 or x0 <= x2")
+            self.logger.warning(f"It holds x0 <= x1 or x0 <= x2 or lam >= 1")
             bound = None
-        return bound
+        return bound, x0
 
     def sieve(self, x0, method='powers', p_iter='multiprocessing', ncpus=2):
         if method == 'naive':
