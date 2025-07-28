@@ -44,7 +44,7 @@ class DiophantineSystem:
         self.d2 = d2
         self.k = f.degree()
         self.params_dict = dict.fromkeys(['theta1', 'theta0', 'm', 'alpha1', 'alpha', 'x0', 'x1', 'x2', 'c0', 'c1',
-                                           'c2', 'lam', 'tn0', 'time'])
+                                           'c2', 'lam', 'tn0', 'sieve_time'])
         self._ais = self._compute_ais()
         self._cis = self._compute_cis()
         if (self._ais[0] * self.d2**self.k < 0) or (self.d1 < 0):
@@ -192,7 +192,7 @@ class DiophantineSystem:
             sols = self._sieve_powers(x0, p_iter=p_iter, ncpus=ncpus)
         t1 = time.time()
         self.logger.info(f"Time for sieve: {t1 - t0} secs")
-        self.params_dict['time'] = t1 - t0
+        self.params_dict['sieve_time'] = t1 - t0
         return sols
 
     def _sieve_naive(self, x0):

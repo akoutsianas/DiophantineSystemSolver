@@ -1,4 +1,5 @@
 import pandas as pd
+import time
 
 import logging
 from sage.all import polygen, QQ, ZZ, ceil, prime_range, legendre_symbol
@@ -24,7 +25,7 @@ class ConsecutivePowersSolver:
         self._lower_bound_n = self._compute_lower_bound_n()
         self.logger.warning(f"For k={self.k} we assume that n >= {max(self._lower_bound_n, 3)}!")
         self._params_df = pd.DataFrame(columns=['k', 'd1', 'd2', 'theta1', 'theta0', 'm', 'alpha1', 'alpha', 'x0',
-                                                'x1', 'x2', 'c0', 'c1', 'c2', 'lam', 'tn0', 'n0', 'time'])
+                                                'x1', 'x2', 'c0', 'c1', 'c2', 'lam', 'tn0', 'n0', 'sieve_time', 'time'])
 
     def set_verbose(self, verbose):
         # Map integers to logging levels
@@ -130,7 +131,8 @@ class ConsecutivePowersSolver:
         n0 = self._lower_bound_n
         sols = []
         for (d1, d2) in pairs:
-            pair_dict = {'d1': d1, 'd2': d2}
+            t0 = time.time()
+            pair_dict = {'d1': d1, 'd2': d2, 'time': None}
             self.logger.info(f"We solve the system for d1={d1} and d2={d2}.")
             if self.k % 2 == 1:
                 ds = DiophantineSystem(f, 2**(self.k - 1) * d1, d2, prec=prec, verbose=self._verbose)
@@ -140,9 +142,6 @@ class ConsecutivePowersSolver:
             n1, x0 = ds.bound_n_for_x0(x0, x0_step=x0_step)
             self.logger.info(f"X0: {x0}")
             sols_ds = ds.sieve(x0, method=sieve_method, p_iter=p_iter, ncpus=ncpus)
-            pair_dict = pair_dict | ds.params_dict
-            self.logger.debug(f"pair_dict: {pair_dict}")
-            self._params_df.loc[len(self._params_df)] = pair_dict
             self.logger.debug(f"Solutions of the Diophantine system after the sieve: {sols_ds}")
             if self.k % 2 == 0:
                 sol_temp = []
@@ -158,6 +157,11 @@ class ConsecutivePowersSolver:
                     sols.append(v)
             self.logger.debug(f"We have n1={n1}.")
             n0 = max(n1, n0)
+            t1 = time.time()
+            pair_dict['time'] = t1 - t0
+            pair_dict = pair_dict | ds.params_dict
+            self.logger.debug(f"pair_dict: {pair_dict}")
+            self._params_df.loc[len(self._params_df)] = pair_dict
         n0 = max(prime_range(3, n0+1))
         self.logger.info(f"We have n>={n0}.")
         self._params_df['k'] = self.k
